@@ -12,9 +12,9 @@ from snakemake.shell import shell
 # Extract arguments.
 extra = snakemake.params.get("extra", "")
 
-sort = snakemake.params.get("sort", "none")
-sort_order = snakemake.params.get("sort_order", "coordinate")
-sort_extra = snakemake.params.get("sort_extra", "")
+sorting = snakemake.params.get("sorting", "none")
+sorting_order = snakemake.params.get("sorting_order", "coordinate")
+sorting_extra = snakemake.params.get("sorting_extra", "")
 
 log = snakemake.log_fmt_shell(stdout=False, stderr=True)
 
@@ -25,43 +25,43 @@ if not isinstance(snakemake.input.reads, str) and len(snakemake.input.reads) not
 }:
     raise ValueError("input must have 1 (single-end) or " "2 (paired-end) elements")
 
-if sort_order not in {"coordinate", "queryname"}:
-    raise ValueError("Unexpected value for sort_order ({})".format(sort_order))
+if sorting_order not in {"coordinate", "queryname"}:
+    raise ValueError("Unexpected value for sorting_order ({})".format(sorting_order))
 
 # Determine which pipe command to use for converting to bam or sorting.
-if sort == "none":
+if sorting == "none":
 
     # Simply convert to bam using samtools view.
     pipe_cmd = "samtools view -Sbh -o {snakemake.output[0]} -"
 
-elif sort == "samtools":
+elif sorting == "samtools":
 
     # Sort alignments using samtools sort.
-    pipe_cmd = "samtools sort {sort_extra} -o {snakemake.output[0]} -"
+    pipe_cmd = "samtools sort {sorting_extra} -o {snakemake.output[0]} -"
 
     # Add name flag if needed.
-    if sort_order == "queryname":
-        sort_extra += " -n"
+    if sorting_order == "queryname":
+        sorting_extra += " -n"
 
     prefix = path.splitext(snakemake.output[0])[0]
-    sort_extra += " -T " + prefix + ".tmp"
+    sorting_extra += " -T " + prefix + ".tmp"
 
-elif sort == "picard":
+elif sorting == "picard":
 
-    # Sort alignments using picard SortSam.
+    # sorting alignments using picard SortSam.
     pipe_cmd = (
-        "picard SortSam {sort_extra} INPUT=/dev/stdin"
-        " OUTPUT={snakemake.output[0]} SORT_ORDER={sort_order}"
+        "picard SortSam {sorting_extra} INPUT=/dev/stdin"
+        " OUTPUT={snakemake.output[0]} SORT_ORDER={sorting_order}"
     )
 
 else:
-    raise ValueError("Unexpected value for params.sort ({})".format(sort))
+    raise ValueError("Unexpected value for params.sorting ({})".format(sorting))
 
 shell(
     "(bwa mem"
     " -t {snakemake.threads}"
     " {extra}"
-    " {snakemake.params.index}"
+    " {snakemake.params.db_prefix}"
     " {snakemake.input.reads}"
     " | " + pipe_cmd + ") {log}"
 )
